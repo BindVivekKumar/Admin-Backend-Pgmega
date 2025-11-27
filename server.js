@@ -22,24 +22,23 @@ app.use(express.json());
 app.use(cookieparser());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS CONFIG
+// CORS
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
       "http://localhost:5174",
       "https://admin-frontend-pgmega.vercel.app",
-      "https://www.roomgi.com", // add your domain
+      "https://www.roomgi.com",
       "https://roomgi.com",
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// Handle preflight requests
-app.options("*", cors());  // ✅ FIXED
+// ❗ REMOVE ALL app.options() — Express doesn't need it
+// app.options("*", cors());  ❌ DELETE
+// app.options("/.*", cors()); ❌ DELETE
 
 // Routes
 app.use("/api/v1/user", userRouter);
