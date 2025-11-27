@@ -31,6 +31,9 @@ app.use(
       "https://admin-frontend-pgmega.vercel.app",
       "https://www.roomgi.com",
       "https://roomgi.com",
+      "https://admin-frontend-pgmega.vercel.app", 
+      "https://roomgi.com",
+      "https://www.roomgi.com"
     ],
     credentials: true,
   })
