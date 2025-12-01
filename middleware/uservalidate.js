@@ -1,98 +1,110 @@
+const Signup = require("../model/user");
+const jwt = require("jsonwebtoken");
 
-const Signup = require("../model/user")
-const jwt = require("jsonwebtoken")
 exports.Validate = async (req, res, next) => {
-    console.log("get")
     try {
         const token = req.cookies.babbarCookie;
-        console.log(token)
+        console.log("Token:", token);
 
         if (!token) {
             return res.status(400).json({
                 success: false,
-                message: "not found the token "
-            })
+                message: "Token not found"
+            });
         }
+
+        // Verify token
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-        console.log("decoded",decoded)
+        console.log("Decoded:", decoded);
+
         if (!decoded) {
             return res.status(400).json({
                 success: false,
-                message: "Ivalid token"
-            })
+                message: "Invalid token"
+            });
         }
-        const users = await Signup.findById(decoded.id);
-        console.log("grvr",users)
-        if (!users) {
-            res.clearCookie('babbarCookie', {
-            httpOnly: true,
-            sameSite: 'none',
-            path: '/', // if used during set
-        });
+
+        // Check user in DB
+        const user = await Signup.findById(decoded.id);
+        console.log("USER:", user);
+
+        // If user not found → CLEAR COOKIE
+        if (!user) {
+            res.clearCookie("babbarCookie", {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none",
+                path: "/"
+            });
 
             return res.status(400).json({
                 success: false,
-                message: "User Not Found"
-            })
+                message: "User not found. Cookie cleared."
+            });
         }
-        req.user = users;
-        // console.log("grvr")
-        console.log("grvr", req.user)
+
+        req.user = user;
         next();
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        })
+        console.log(error);
 
-    }
-}
+        // If token expired → CLEAR COOKIE
+        if (error.name === "TokenExpiredError") {
+            res.clearCookie("babbarCookie", {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none",
+                path: "/"
+            });
 
-exports.IsBranchmanager = async (req, res, next) => {
-
-    try {
-        const role=req.user.role;
-        if(role!="branch-manager"){
-            return res.status(400).json({
-                success:false,
-                message:"you are not Authorised to see this page "
-            })
+            return res.status(401).json({
+                success: false,
+                message: "Token expired. Please login again."
+            });
         }
-        next()
-        
-    }  catch (error) {
-        console.log(error)
+
         return res.status(500).json({
             success: false,
             message: "Internal server error"
-        })
-
+        });
     }
-}
+};
 
 
+// ================== ROLE CHECK MIDDLEWARE =================== //
 
-exports.IsOwner = async (req, res, next) => {
-
+exports.IsBranchmanager = (req, res, next) => {
     try {
-        const role=req.user.role;
-        console.log(req.user)
-        if(role!="owner"){
-            return res.status(400).json({
-                success:false,
-                message:"you are not Authorised to see this page "
-            })
+        if (req.user.role !== "branch-manager") {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to access this page"
+            });
         }
-        next()
-        
-    }  catch (error) {
-        console.log(error)
+        next();
+    } catch (error) {
+        console.log(error);
         return res.status(500).json({
             success: false,
             message: "Internal server error"
-        })
-
+        });
     }
-}
+};
 
+exports.IsOwner = (req, res, next) => {
+    try {
+        if (req.user.role !== "owner") {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to access this page"
+            });
+        }
+        next();
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+};
