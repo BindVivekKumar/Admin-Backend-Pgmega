@@ -18,6 +18,13 @@ const signupcontroller = async (req, res) => {
                 message: 'please filled all the data carefully'
             })
         }
+        if (password.length < 6 || password.length > 10) {
+            return res.status(400).json({
+                success: false,
+                message: "Password length should be between 6 to 10 characters"
+            });
+        }
+
 
         const existinguser = await Signup.findOne({ email: email });
         if (existinguser) {
@@ -49,11 +56,33 @@ const signupcontroller = async (req, res) => {
             role
         })
         console.log("User", User)
+        const payload = {
+            id: User._id,
+            name: User.username,
+            email: User.email,
+            role: User.role,
+        };
 
-        return res.status(200).json({
-            success: true,
-            message: 'user registered successfully',
+        const token = jwt.sign(payload, process.env.JWT_SECRET_KEY, {
+            expiresIn: "24h"
         })
+        const options = {
+            path: "/",
+            expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days
+            httpOnly: true,
+            secure: true,
+            sameSite: "none"
+        };
+
+        res.cookie("babbarCookie", token, options).status(200).json({
+            success: true,
+            token,
+            existingUser: User,
+            message: "User logged in successfully",
+        });
+
+
+
 
 
 
@@ -68,53 +97,53 @@ const signupcontroller = async (req, res) => {
 // --------------------------------------------
 // ADD OR REMOVE FROM WISHLIST (TOGGLE)
 // --------------------------------------------
- const toggleWishlist = async (req, res) => {
-  try {
-    console.log(req.body)
-    const userId = req.user._id;
-    const { pgId } = req.body;
+const toggleWishlist = async (req, res) => {
+    try {
+        console.log(req.body)
+        const userId = req.user._id;
+        const { pgId } = req.body;
 
-    if (!pgId) {
-      return res.status(400).json({ message: "PG ID is required" });
+        if (!pgId) {
+            return res.status(400).json({ message: "PG ID is required" });
+        }
+
+        // check if exists
+        const exists = await Wishlist.findOne({ userId, pgId });
+
+        if (exists) {
+            await Wishlist.deleteOne({ userId, pgId });
+            return res.json({ success: true, message: "Removed from wishlist" });
+        }
+
+        // add
+        const newItem = await Wishlist.create({ userId, pgId });
+        return res.json({ success: true, message: "Added to wishlist", data: newItem });
+
+    } catch (error) {
+        console.error("Wishlist toggle error:", error);
+        res.status(500).json({ message: "Server error", error });
     }
-
-    // check if exists
-    const exists = await Wishlist.findOne({ userId, pgId });
-
-    if (exists) {
-      await Wishlist.deleteOne({ userId, pgId });
-      return res.json({ success: true, message: "Removed from wishlist" });
-    }
-
-    // add
-    const newItem = await Wishlist.create({ userId, pgId });
-    return res.json({ success: true, message: "Added to wishlist", data: newItem });
-
-  } catch (error) {
-    console.error("Wishlist toggle error:", error);
-    res.status(500).json({ message: "Server error", error });
-  }
 };
 
 
 // --------------------------------------------
 // GET USER WISHLIST
 //---------------------------------------------
- const getWishlist = async (req, res) => {
-  try {
-    const userId = req.user._id;
+const getWishlist = async (req, res) => {
+    try {
+        const userId = req.user._id;
 
-    const items = await Wishlist.find({ userId });
-    console.log(items)
+        const items = await Wishlist.find({ userId });
+        console.log(items)
 
-    res.json({
-      success: true,
-      data: items,
-    });
-  } catch (error) {
-    console.error("Fetch wishlist error:", error);
-    res.status(500).json({ message: "Server error", error });
-  }
+        res.json({
+            success: true,
+            data: items,
+        });
+    } catch (error) {
+        console.error("Fetch wishlist error:", error);
+        res.status(500).json({ message: "Server error", error });
+    }
 };
 
 
@@ -371,4 +400,4 @@ const checkmail = async (req, res) => {
 
     }
 }
-module.exports = { signupcontroller,getWishlist,toggleWishlist, GetUserProfile, Logincontroller, Logoutcontroller, forgotUser, checkmail };
+module.exports = { signupcontroller, getWishlist, toggleWishlist, GetUserProfile, Logincontroller, Logoutcontroller, forgotUser, checkmail };

@@ -9,9 +9,10 @@ const {
     GetAllBranchOwner, AddBranch, EditBranch, getAllPg,
     getAllBranchesWithLocation,
     AppliedFilters, AppliedAllFilters, DeleteRoom,
-    UpdateRoom, AllRooms, GetRoomById,
+    UpdateRoom, AllRooms, GetRoomById,changebranchpassword,
     DeleteBranch, DeleteProperty, GetAllBranch,
     AddRoom, addhotelroom, getdetails,
+    getalllistedandunlisted,listPgRoom,
     appointBranchManager, GetAllBranchByBranchId
 } = require("../controller/property");
 
@@ -20,6 +21,9 @@ console.log("hii")
 
 //  router.post("/create",Validate, CreateProperty);
 router.get("/get", Validate, GetAllBranch)
+router.get("/getallpg", getalllistedandunlisted)
+router.post("/listpg", listPgRoom)
+router.put("/branchmanager/passwordchange", Validate, changebranchpassword)
 router.get("/location/:branchId", getAllBranchesWithLocation)
 router.get("/getalllbranchowner", Validate, GetAllBranchOwner)
 router.get("/allrooms", Validate, AllRooms)

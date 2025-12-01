@@ -11,16 +11,19 @@ const branchManagerSchema = new mongoose.Schema(
         name: {
             type: String
         },
+        pwdchanged: {
+            type: Boolean, default: false
+        },
         email: {
             type: String
         },
         phone: {
             type: Number
         },
-        status:{
-            type:String,
-            enum:["Active","In-Active"],
-            default:"Active"
+        status: {
+            type: String,
+            enum: ["Active", "In-Active"],
+            default: "Active"
         }
     },
     { timestamps: true } // ✅ adds createdAt & updatedAt automatically
