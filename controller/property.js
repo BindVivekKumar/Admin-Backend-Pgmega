@@ -5,7 +5,7 @@ const Signup = require("../model/user")
 const branchmanager = require("../model/branchmanager")
 const bcrypt = require("bcrypt")
 const Uploadmedia = require("../utils/cloudinary.js")
-const axios=require('axios')
+const axios = require('axios')
 
 async function AllProperty(id) {
     const Allproprty = await Property.find({ owner: id }).populate({
@@ -62,125 +62,125 @@ exports.CreateProperty = async (req, res) => {
 }
 
 exports.AddBranch = async (req, res) => {
-  console.log(req.body);
+    console.log(req.body);
 
-  try {
-    const userId = req.user._id;
-    const imageFiles = req.files || [];
-    const uploadimages = [];
+    try {
+        const userId = req.user._id;
+        const imageFiles = req.files || [];
+        const uploadimages = [];
 
-    const foundproperty = await Signup.findById(userId);
-    if (!foundproperty) {
-      return res.status(400).json({
-        success: false,
-        message: "Property not found",
-      });
+        const foundproperty = await Signup.findById(userId);
+        if (!foundproperty) {
+            return res.status(400).json({
+                success: false,
+                message: "Property not found",
+            });
+        }
+
+        const {
+            address,
+            city,
+            state,
+            pincode,
+            name,
+            streetAdress,
+            landmark,
+        } = req.body;
+
+        if (!address || !city || !state || !pincode || !streetAdress || !landmark || !name) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing required fields",
+            });
+        }
+
+        // ----------------------------
+        // Upload Images
+        // ----------------------------
+        for (let file of imageFiles) {
+            const uploadRes = await Uploadmedia.Uploadmedia(file.path);
+            uploadimages.push(uploadRes.secure_url);
+        }
+
+        // ----------------------------
+        // Combine full address to geocode
+        // ----------------------------
+        const fullAddress = `${streetAdress}, ${landmark}, ${address}, ${city}, ${state}, ${pincode}`;
+
+        console.log("FULL ADDRESS:", fullAddress);
+
+        // ----------------------------
+        // Fetch Coordinates using Google API
+        // ----------------------------
+        const geo = await axios.get(
+            `https://maps.googleapis.com/maps/api/geocode/json`,
+            {
+                params: {
+                    address: fullAddress,
+                    key: "AIzaSyBI_1GjWzjhnK--jH94wVq3dmdOGm6sUos",
+                },
+            }
+        );
+
+        const geoData = geo.data;
+
+        let lat = null;
+        let lng = null;
+
+        if (geoData.status === "OK" && geoData.results.length > 0) {
+            lat = geoData.results[0].geometry.location.lat;
+            lng = geoData.results[0].geometry.location.lng;
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "Unable to fetch latitude and longitude for given address",
+                google_response: geoData.status,
+            });
+        }
+
+        console.log("Coordinates:", lat, lng);
+
+        // ----------------------------
+        // Create branch in database
+        // ----------------------------
+        const CreatedBranch = await PropertyBranch.create({
+            city,
+            name,
+            address,
+            state,
+            pincode,
+            streetAdress,
+            landmark,
+
+            owner: req.user._id,
+            property: foundproperty._id,
+
+            Propertyphoto: uploadimages,
+
+            // GeoJSON location
+            location: {
+                type: "Point",
+                coordinates: [lng, lat], // IMPORTANT: MongoDB format is [long, lat]
+            },
+
+            lat: lat,
+            long: lng,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Branch created successfully",
+            CreatedBranch,
+        });
+
+    } catch (error) {
+        console.log("ERROR in AddBranch:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error",
+            error: error.message,
+        });
     }
-
-    const {
-      address,
-      city,
-      state,
-      pincode,
-      name,
-      streetAdress,
-      landmark,
-    } = req.body;
-
-    if (!address || !city || !state || !pincode || !streetAdress || !landmark || !name) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields",
-      });
-    }
-
-    // ----------------------------
-    // Upload Images
-    // ----------------------------
-    for (let file of imageFiles) {
-      const uploadRes = await Uploadmedia.Uploadmedia(file.path);
-      uploadimages.push(uploadRes.secure_url);
-    }
-
-    // ----------------------------
-    // Combine full address to geocode
-    // ----------------------------
-    const fullAddress = `${streetAdress}, ${landmark}, ${address}, ${city}, ${state}, ${pincode}`;
-
-    console.log("FULL ADDRESS:", fullAddress);
-
-    // ----------------------------
-    // Fetch Coordinates using Google API
-    // ----------------------------
-    const geo = await axios.get(
-      `https://maps.googleapis.com/maps/api/geocode/json`,
-      {
-        params: {
-          address: fullAddress,
-          key: "AIzaSyBI_1GjWzjhnK--jH94wVq3dmdOGm6sUos",
-        },
-      }
-    );
-
-    const geoData = geo.data;
-
-    let lat = null;
-    let lng = null;
-
-    if (geoData.status === "OK" && geoData.results.length > 0) {
-      lat = geoData.results[0].geometry.location.lat;
-      lng = geoData.results[0].geometry.location.lng;
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: "Unable to fetch latitude and longitude for given address",
-        google_response: geoData.status,
-      });
-    }
-
-    console.log("Coordinates:", lat, lng);
-
-    // ----------------------------
-    // Create branch in database
-    // ----------------------------
-    const CreatedBranch = await PropertyBranch.create({
-      city,
-      name,
-      address,
-      state,
-      pincode,
-      streetAdress,
-      landmark,
-
-      owner: req.user._id,
-      property: foundproperty._id,
-
-      Propertyphoto: uploadimages,
-
-      // GeoJSON location
-      location: {
-        type: "Point",
-        coordinates: [lng, lat], // IMPORTANT: MongoDB format is [long, lat]
-      },
-
-      lat: lat,
-      long: lng,
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Branch created successfully",
-      CreatedBranch,
-    });
-
-  } catch (error) {
-    console.log("ERROR in AddBranch:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-      error: error.message,
-    });
-  }
 };
 
 
@@ -219,46 +219,46 @@ exports.GetAllBranch = async (req, res) => {
 
 // Example API endpoint
 exports.getAllBranchesWithLocation = async (req, res) => {
-  try {
-    const {branchId} = req.params;
+    try {
+        const { branchId } = req.params;
 
-    const branch = await PropertyBranch.findById(branchId)
-      .populate("rooms") // if rooms are separate model (optional)
-      .lean();
+        const branch = await PropertyBranch.findById(branchId)
+            .populate("rooms") // if rooms are separate model (optional)
+            .lean();
 
-    if (!branch) {
-      return res.status(404).json({
-        success: false,
-        message: "Branch not found",
-      });
+        if (!branch) {
+            return res.status(404).json({
+                success: false,
+                message: "Branch not found",
+            });
+        }
+
+        // Extract main branch location
+        const branchLocation = branch.location && branch.location.coordinates
+            ? { lat: branch.location.coordinates[1], lng: branch.location.coordinates[0] }
+            : (branch.lat && branch.long ? { lat: branch.lat, lng: branch.long } : null);
+
+        return res.json({
+            success: true,
+            branch: {
+                _id: branch._id,
+                name: branch.name,
+                address: branch.address,
+                city: branch.city,
+                state: branch.state,
+                pincode: branch.pincode,
+                location: branchLocation,
+                rooms: branch.rooms, // All rooms of this branch
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
     }
-
-    // Extract main branch location
-    const branchLocation = branch.location && branch.location.coordinates
-      ? { lat: branch.location.coordinates[1], lng: branch.location.coordinates[0] }
-      : (branch.lat && branch.long ? { lat: branch.lat, lng: branch.long } : null);
-
-    return res.json({
-      success: true,
-      branch: {
-        _id: branch._id,
-        name: branch.name,
-        address: branch.address,
-        city: branch.city,
-        state: branch.state,
-        pincode: branch.pincode,
-        location: branchLocation,
-        rooms: branch.rooms, // All rooms of this branch
-      }
-    });
-
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
 };
 
 
@@ -330,6 +330,57 @@ exports.GetAllBranchByBranchId = async (req, res) => {
 
     }
 }
+
+
+
+exports.changebranchpassword = async (req, res) => {
+
+    try {
+        const { id, password, confirmPassword } = req.body;
+        console.log("fcd", req.body)
+
+
+        const branchmanagers = await branchmanager.findById(id)
+        if (password != confirmPassword) {
+            return res.status(400).json({
+                succes: false,
+                message: "password and conferm password not match"
+            })
+        }
+        if (password.length < 6 || password.lengt > 10) {
+            return res.status(400).json({
+                succes: false,
+                message: "password and conferm password not match"
+            })
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const branchser = await Signup.findById(id)
+        branchmanagers.pwdchanged = true,
+            await branchmanagers.save()
+        branchser.password = hashedPassword;
+        await branchser.save()
+
+
+
+        return res.status(200).json({
+            success: true,
+            message: "Branch manager password pdated successfully",
+        });
+
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        });
+    }
+};
+
+
+
 exports.EditBranch = async (req, res) => {
 
     try {
@@ -1034,9 +1085,10 @@ exports.getAllPg = async (req, res) => {
                 select: "-rooms -__v -createdAt -updatedAt"  // ⬅ REMOVE heavy fields
             })
             .exec();
-            console.log(branches)
-
-        const allrooms = branches.flatMap(branch => branch.rooms);
+        console.log(branches)
+        const allrooms = branches.flatMap(branch =>
+            branch.rooms.filter(room => room.toPublish?.status === true)
+        );
 
         return res.status(200).json({
             success: true,
@@ -1050,6 +1102,98 @@ exports.getAllPg = async (req, res) => {
             success: false,
             message: "Internal server error",
             error: error.message,
+        });
+    }
+};
+
+
+
+
+exports.getalllistedandunlisted = async (req, res) => {
+    try {
+        const branches = await PropertyBranch.find({}, null, { strictPopulate: false })
+            .populate({
+                path: "rooms.branch",
+                model: "PropertyBranch",
+                select: "-rooms -__v -createdAt -updatedAt"
+            })
+            .exec();
+
+        // Fetch listed rooms
+        const listedRooms = branches.flatMap(branch =>
+            branch.rooms.filter(room => room.toPublish?.status === true)
+        );
+
+        // Fetch unlisted rooms
+        const unlistedRooms = branches.flatMap(branch =>
+            branch.rooms.filter(room => room.toPublish?.status === false)
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetched listed and unlisted rooms successfully",
+            listedRooms,
+            unlistedRooms
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        });
+    }
+};
+
+
+exports.listPgRoom = async (req, res) => {
+    try {
+        const { branchId, roomId } = req.body;
+
+        if (!branchId || !roomId) {
+            return res.status(400).json({
+                success: false,
+                message: "branchId and roomId are required"
+            });
+        }
+
+        // Find branch
+        const branch = await PropertyBranch.findById(branchId);
+        if (!branch) {
+            return res.status(404).json({
+                success: false,
+                message: "Branch not found"
+            });
+        }
+
+        // Find room
+        const room = branch.rooms.id(roomId);
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: "Room not found"
+            });
+        }
+
+        // Update publish status
+        room.toPublish.status = true;
+        room.toPublish.date = new Date();
+
+        await branch.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Room published (listed) successfully",
+            updatedRoom: room
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
         });
     }
 };
