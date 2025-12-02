@@ -683,7 +683,7 @@ exports.AddRoom = async (req, res) => {
 
         // Save inside branch.rooms array
         foundBranch.rooms.push(newRoom);
-        foundBranch.totalBeds += bedCount;
+      
 
         await foundBranch.save();
 
