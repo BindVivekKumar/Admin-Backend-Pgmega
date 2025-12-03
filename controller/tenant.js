@@ -132,7 +132,7 @@ exports.MarkTenantInactive = async (req, res) => {
             if (room.occupied === 0) {
                 branch.occupiedRoom = branch.occupiedRoom.filter(rn => rn !== roomNum);
             }
-            foundBranch.totalBeds+=1;
+            branch.totalBeds+=1;
 
           
             await branch.save();
