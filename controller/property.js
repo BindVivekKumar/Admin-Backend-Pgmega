@@ -1,4 +1,3 @@
-
 const Property = require("../model/property")
 
 const PropertyBranch = require("../model/propertyBranch")
@@ -1342,4 +1341,3 @@ exports.listPgRoom = async (req, res) => {
         });
     }
 };
-
