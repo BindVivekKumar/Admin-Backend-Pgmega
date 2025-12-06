@@ -329,7 +329,7 @@ exports.verifying = async (req, res) => {
             room.vacant = capacity - room.occupied;
 
             if (room.occupied >= capacity) {
-                room.availabilityStatus = "Occupied";
+                 room.availabilityStatus = "Occupied";
                 if (!branchDoc.occupiedRoom.includes(Number(roomNumber))) {
                     branchDoc.occupiedRoom.push(Number(roomNumber));
                 }
@@ -361,9 +361,7 @@ exports.verifying = async (req, res) => {
         branchDoc.markModified("rooms");
         await branchDoc.save();
 
-        // -----------------------
-        //  STORE PAYMENT
-        // -----------------------
+       
         await Payment.create({
             tenantId: req.user._id,
             branch: branchId,

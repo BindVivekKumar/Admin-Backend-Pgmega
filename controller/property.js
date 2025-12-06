@@ -563,7 +563,7 @@ exports.appointBranchManager = async (req, res) => {
 };
 exports.AddRoom = async (req, res) => {
     try {
-      
+
 
         const imageFiles = req.files?.images;
 
@@ -684,7 +684,7 @@ exports.AddRoom = async (req, res) => {
             notAllowed: notAllowedArr,
             rules: rulesArr,
             furnishedType: furnishedType || "Semi Furnished",
-            vacant : type === "Single" ? 1 : type === "Double" ? 2 : type === "Triple" ? 3 : 1,
+            vacant: type === "Single" ? 1 : type === "Double" ? 2 : type === "Triple" ? 3 : 1,
             availabilityStatus: availabilityStatus || "Available",
             category,
             city: city || foundBranch.city,
@@ -1291,31 +1291,32 @@ exports.listPgRoom = async (req, res) => {
             });
         }
 
-        
+
         const branch = await PropertyBranch.findById(branchId);
         if (!branch) {
             return res.status(404).json({ success: false, message: "Branch not found" });
         }
 
-      
+
         const room = branch.rooms.id(roomId);
         if (!room) {
             return res.status(404).json({ success: false, message: "Room not found" });
         }
 
-      
+
         if (room.category === "Pg") {
             const bedCount = room.type === "Single" ? 1 :
                 room.type === "Double" ? 2 : 3;
 
             if (!room.toPublish.status) {
-             
+
                 room.toPublish.status = true;
                 room.verified = true;
+                room.vacant = bedCount;
 
                 branch.totalBeds += bedCount;
             } else {
-             
+
                 if (!comment) {
                     return res.status(400).json({ success: false, message: "Please write the reasons" });
                 }
@@ -1323,17 +1324,20 @@ exports.listPgRoom = async (req, res) => {
                 room.comment = comment;
                 room.toPublish.status = false;
                 room.verified = false;
+                room.vacant = 0
 
-              
+
+
                 branch.totalBeds = Math.max(0, branch.totalBeds - bedCount);
             }
         }
 
-      
+
         if (room.category === "Hotel") {
             if (!room.toPublish.status) {
                 room.toPublish.status = true;
                 room.verified = true;
+                room.vacant=1;
 
                 branch.totelhotelroom += 1;
             } else {
@@ -1344,6 +1348,7 @@ exports.listPgRoom = async (req, res) => {
                 room.comment = comment;
                 room.toPublish.status = false;
                 room.verified = false;
+                room.vacant=0;
 
                 branch.totelhotelroom = Math.max(0, branch.totelhotelroom - 1);
             }
@@ -1354,6 +1359,7 @@ exports.listPgRoom = async (req, res) => {
             if (!room.toPublish.status) {
                 room.toPublish.status = true;
                 room.verified = true;
+                room.vacant=1;
 
                 branch.totalrentalRoom += 1;
             } else {
@@ -1365,6 +1371,7 @@ exports.listPgRoom = async (req, res) => {
                 room.toPublish.status = false;
                 room.verified = false;
 
+                room.vacant=0;
                 branch.totalrentalRoom = Math.max(0, branch.totalrentalRoom - 1);
             }
         }

@@ -106,6 +106,10 @@ const RoomSchema = new mongoose.Schema({
         type: String,
         enum: ["Fully Furnished", "Semi Furnished", "Unfurnished"],
     },
+    vacant:{
+        type:Number,
+        default:0,
+    },
 
 
 
