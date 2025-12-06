@@ -300,14 +300,10 @@ exports.verifying = async (req, res) => {
         ------------------------------------------------- */
         if (room.category === "Pg") {
 
-            console.log("🏘 PG ROOM SELECTED");
-
             const capacity =
                 room.type === "Double" ? 2 :
-                room.type === "Triple" ? 3 :
-                1;
-
-            console.log("👥 Capacity:", capacity);
+                    room.type === "Triple" ? 3 :
+                        1;
 
             const tenantsInRoom = await Tenant.countDocuments({
                 branch: branchId,
@@ -316,14 +312,14 @@ exports.verifying = async (req, res) => {
             });
 
             if (tenantsInRoom >= capacity) {
-                room.availabilityStatus = "Occupied";
                 return res.status(400).json({ success: false, message: "Room already full" });
             }
 
-            if (!room.verified)
+            if (!room.verified) {
                 return res.status(400).json({ success: false, message: "Room is not verified" });
+            }
 
-            // CREATE TENANT
+            // Create tenant
             newTenant = await Tenant.create({
                 branch: branchId,
                 name,
@@ -333,20 +329,20 @@ exports.verifying = async (req, res) => {
                 roomNumber
             });
 
+            // Update counts
             room.occupied += 1;
-            room.vacant = Math.max(0, capacity - (tenantsInRoom + 1));
 
-            if (tenantsInRoom + 1 >= capacity) room.availabilityStatus = "Occupied";
+            const newCount = tenantsInRoom + 1;
+            room.vacant = Math.max(0, capacity - newCount);
+
+            // Set availability
+            room.availabilityStatus = newCount >= capacity ? "Occupied" : "Available";
         }
 
 
-        /* -------------------------------------------------
-         🏨 HOTEL & RENTED ROOM HANDLING  
-         - Only 1 person allowed
-         ------------------------------------------------- */
         else if (room.category === "Hotel" || room.category === "Rented-Room") {
 
-            const capacity = 1; // hotel / rented room → ONLY one person allowed
+            const capacity = 1;
 
             if (room.occupied >= capacity)
                 return res.status(400).json({ success: false, message: "Room already full" });
